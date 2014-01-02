@@ -64,9 +64,6 @@ def before_tenant_delete(mapper, connection, target):
     pass
 
 
-
-
-
 class TenantSession(session.Session):
     def __init__(self, query_cls=None, *args, **kwargs):
         self.tenant = None
@@ -107,32 +104,48 @@ class TenantSession(session.Session):
 
 
 class TenantQuery(query.Query):
-    @property
-    def _from_obj(self):
-        if getattr(self, '_from_obj_', None) is None:
-            self._from_obj_ = FromObjWrapper(())
-            self._from_obj_.set_query(self)
-        return self._from_obj_
-
-    @_from_obj.setter
-    def _from_obj(self, value):
-        self._from_obj_ = FromObjWrapper(value)
-        self._from_obj_.set_query(self)
-
     def __init__(self, *args, **kwargs):
         self._safe = kwargs.pop('safe', True)
         super(TenantQuery, self).__init__(*args, **kwargs)
 
+    @property
+    def _from_obj(self):
+        if getattr(self, '_from_obj_', None) is None:
+            self._from_obj_ = ()
+        for from_ in self._from_obj_:
+            _process_from(from_, self)
+        return self._from_obj_
+
+    @_from_obj.setter
+    def _from_obj(self, value):
+        self._from_obj_ = value
+
     def _join_to_left(self, l_info, left, right, onclause, outerjoin):
-        retval = super(TenantQuery, self)._join_to_left(
+        super(TenantQuery, self)._join_to_left(
                 l_info, left, right, onclause, outerjoin)
 
         _process_from(inspection.inspect(right).selectable, self)
-        return retval
+
+
+class TenantQueryContext(query.QueryContext):
+    @property
+    def froms(self):
+        if getattr(self, '_froms', None) is None:
+            self._froms = []
+        for from_ in self._froms:
+            _process_from(from_, self.query, self)
+        return self._froms
+
+    @froms.setter
+    def froms(self, value):
+        self._froms = value
+
+# monkey patch to avoid needing changes to SQLAlchemy
+query.QueryContext = TenantQueryContext
 
 
 def _process_from(from_, query, query_context=None):
-    if not query._safe:
+    if not getattr(query, '_safe', None):
         return
 
     tenant_id_col = from_.c.get('tenant_id')
@@ -158,83 +171,3 @@ def _process_from(from_, query, query_context=None):
                         query_context.whereclause & criterion)
             else:
                 query_context.whereclause = criterion
-
-
-class _FromsWrapper(object):
-    """
-    The QueryContext.froms instance attribute is replaced with an instance of
-    this to ensure that any time a query selects from a multi-tenant table in a
-    TenantSession, a criterion is added to the query to ensure that only rows
-    owned by the correct tenant are included in the results.
-
-    At the moment, removing elements or deleting QueryContext.froms does not
-    remove associated criteria from the query.
-    """
-    def __init__(self, value):
-        self.value = value
-
-    def set_query(self, query, query_context=None):
-        self.query = query
-        self.query_context = query_context
-        for from_ in self.value:
-            self._process(from_)
-
-    def __iadd__(self, value):
-        self.extend(value)
-
-    def extend(self, value):
-        value = list(value)
-        for from_ in value:
-            self._process(from_)
-        self.value.extend(value)
-
-    def __add__(self, other):
-        other = list(other)
-        for from_ in other:
-            _process_from(from_, self.query)
-        return list(self.value) + other
-
-    def _process(self, from_):
-        _process_from(from_, self.query, self.query_context)
-    
-    # not used by SQLAlchemy
-    #def append(self, from_):
-        #self._process(from_)
-        #self.value.append(from_)
-
-    #def __setitem__(self, item, value):
-        #self._process(value)
-        #self.value[item] = value
-
-
-# Subclassing tuple doesn't do anything here other than ensure that there isn't
-# a type error when an actual tuple is added to an instance in SQLAlchemy.
-class FromObjWrapper(_FromsWrapper, tuple):
-    pass
-
-
-# Subclassing list doesn't actually do anything here, except to fool
-# SQLAlchemy's inspection API in order to keep things working the way they're
-# supposed to.
-class FromsWrapper(_FromsWrapper, list):
-    pass
-
-
-class TenantQueryContext(query.QueryContext):
-    @property
-    def froms(self):
-        if getattr(self, '_froms', None) is None:
-            self._froms = FromsWrapper([])
-            self._froms.set_query(self.query, self)
-        return self._froms
-
-    @froms.setter
-    def froms(self, value):
-        if isinstance(value, FromsWrapper):
-            self._froms = value
-        else:
-            self._froms = FromsWrapper(value or [])
-            self._froms.set_query(self.query, self)
-
-# monkey patch to avoid needing changes to SQLAlchemy
-query.QueryContext = TenantQueryContext

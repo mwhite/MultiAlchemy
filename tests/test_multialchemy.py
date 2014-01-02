@@ -9,6 +9,8 @@ from sqlalchemy.ext.declarative import declarative_base
 
 import multialchemy
 
+import sqlalchemy
+
 # Whew, this test fixtures dependency thing is fun.  Hope I didn't go overboard.
 @pytest.fixture(scope="module")
 def engine():
@@ -24,6 +26,7 @@ def engine():
 @pytest.fixture(scope="module")
 def models(engine):
     Base = declarative_base(cls=multialchemy.Base)
+    #Base = declarative_base()
 
     @Base.tenant_class
     class Tenant(Base):
@@ -47,6 +50,7 @@ def models(engine):
         title = Column(String(200))
         author_id = Column(Integer, ForeignKey('users.id'))
         author = relationship(User, backref='posts')
+        tenant_id = Column(Integer, ForeignKey('tenants.id'))
 
     class foo(object):
         pass
@@ -66,6 +70,7 @@ def models(engine):
 @pytest.fixture(scope="module")
 def TenantSession(engine, models):
     return sessionmaker(bind=engine, class_=multialchemy.TenantSession)
+    #return sessionmaker(bind=engine)
 
 
 @pytest.fixture(scope="function")
@@ -92,10 +97,7 @@ def test_multitenant_query_enforces_tenant(models, session):
 
 
 def test_join_enforces_tenant(models, session):
-    print("asdfasdfasdfasdfasdfasdf")
-    print(str(session.query(models.User, safe=False).join(models.User.posts)))
-    sql = str(session.query(models.User).join(models.User.posts))
-    print(sql)
+    sql = str(session.query(models.User).join(models.Post))
     assert 'posts.tenant_id = ' in sql
     assert 'JOIN' in sql
 
@@ -112,15 +114,12 @@ def test_unsafe_query_doesnt_enforce_tenant(models, session):
 
 
 def test_non_multitenant_query_doesnt_enforce_tenant(models, session):
-    print("asdf")
-    print(str(session.query(models.Post)))
     sql = str(session.query(models.User))
     assert 'tenant_id' not in sql
 
 
 def test_new_instance_gets_tenant_id_when_added(models, session):
     post = models.Post(title='Foo!', author_id=1)
-    print("authorrrrrr", post.author)
     session.add(post)
     assert post.tenant_id == session.tenant.id
 
