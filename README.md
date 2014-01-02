@@ -4,45 +4,15 @@ MultiAlchemy
 [![Build Status](https://travis-ci.org/mwhite/MultiAlchemy.png)](https://travis-ci.org/mwhite/MultiAlchemy)
 [![Coverage Status](https://coveralls.io/repos/mwhite/MultiAlchemy/badge.png)](https://coveralls.io/r/mwhite/MultiAlchemy)
 
-MultiAlchemy is an experimental SQLAlchemy extension that makes it easy to
-develop multi-tenant applications without having to worry about keeping each
-tenant's data separate in every operation.
-
-At the moment, it only works on SQLAlchemy 0.9, it relies on monkey-patching
-implementation details of the SQLAlchemy ORM, it's probably is a leaky
-abstraction in unknown ways, and it lacks decent configuration options, so use
-at your own risk!
-
-Background
--- 
-
-A multi-tenant application is one that handles many different users' or tenants'
-data, each of which is mostly or completely separate from the rest.
-
-One solution for storing multi-tenant data in a RDBMS would be to create a
-separate database for each tenant.  This doesn't scale for large numbers of
-tenants.  Creating a database can be an expensive operation, schema migrations
-become more difficult, and there's no ability to have part of the data be shared
-between tenants.
-
-Another solution is to use
-[schemas](http://www.postgresql.org/docs/9.3/static/ddl-schemas.html), but this
-has the same essential properties as separate databases.
-
-The most scalable solution is to have a `tenant_id` foreign key in each table
-that's part of the multi-tenant data.  However, it's a pain and a potential
-security risk for developers to pass around the current session's tenant and
-ensure it gets added to any new objects created with the ORM and added as a
-condition in any queries.
-
-MultiAlchemy aims to automate this, abstracting the multi-tenancy out of the
-model definitions and queries.
+MultiAlchemy is an experimental [SQLAlchemy](http://www.sqlalchemy.org)
+extension that makes it easy to write row-based multi-tenant applications
+without having to manually ensure data separation for every operation.
 
 Usage
 --
 
-Here's an example schema taken from the tests that has a tenant table, one other
-global table (users), and one per-tenant table (posts).
+Here's an example schema, taken from the tests, that has a tenant table, one
+other global table (users), and one per-tenant table (posts).
 
 ```python
 from sqlalchemy import *
@@ -104,15 +74,19 @@ bind it as the current session's tenant.
 >>> session.tenant = tenant
 ```
 
-If we do a query involving a multitenant model, a criterion will automatically
-be added to filter the results to only those matching the current session's
-tenant, even for joins.
+If we do a query involving a multitenant model, a filter will automatically be
+added to limit the results to only those matching the current session's tenant.
 
 ```python
 >>> print(str(session.query(Post)))
 SELECT posts.id AS posts_id, posts.title AS posts_title, posts.author_id AS posts_author_id, posts.tenant_id AS posts_tenant_id 
 FROM posts 
 WHERE posts.tenant_id = :tenant_id_1
+```
+
+This works for joins too.
+
+```python
 >>> print(str(session.query(User).join(Post)))
 SELECT users.id AS users_id, users.name AS users_name 
 FROM users JOIN posts ON users.id = posts.author_id 
@@ -131,7 +105,20 @@ them to the session:
 1
 ```
 
+Roadmap
+--
+
+- System for creating views for specific tenants for specific tables where some
+  data is stored in a Postgres JSON column with a known semi-structured schema.
+
+- Automatically creating per-tenant users and views for all multi-tenant tables,
+  for applications which might want to expose a direct query console to users,
+  or that need extra strictness.  This would need to hook into migrations for
+  when multi-tenant tables are added or modified.
+
 License
 --
 
-MIT
+Copyright 2014 Michael White
+
+Released under the MIT License.  See LICENSE.txt.
