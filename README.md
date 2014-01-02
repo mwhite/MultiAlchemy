@@ -1,6 +1,9 @@
 MultiAlchemy
 ==
 
+[![Build Status](https://travis-ci.org/mwhite/MultiAlchemy.png)](https://travis-ci.org/mwhite/MultiAlchemy)
+[![Coverage Status](https://coveralls.io/repos/mwhite/MultiAlchemy/badge.png)](https://coveralls.io/r/mwhite/MultiAlchemy)
+
 MultiAlchemy is an experimental SQLAlchemy extension that makes it easy to
 develop multi-tenant applications without having to worry about keeping each
 tenant's data separate in every operation.
