@@ -2,6 +2,7 @@ from sqlalchemy import inspection, event, Column, Integer, ForeignKey
 from sqlalchemy.orm import session, query
 from sqlalchemy.sql import expression
 from sqlalchemy.ext.declarative import declared_attr
+import sqlalchemy
 
 __all__ = [
     'Base',
@@ -9,6 +10,8 @@ __all__ = [
     'TenantConflict',
     'UnboundTenantError'
 ]
+
+SQLA_VERSION_8 = sqlalchemy.__version__.startswith('0.8')
 
 
 class UnboundTenantError(Exception):
@@ -125,9 +128,10 @@ class TenantQuery(query.Query):
     def _from_obj(self, value):
         self._from_obj_ = value
 
-    def _join_to_left(self, l_info, left, right, onclause, outerjoin):
-        super(TenantQuery, self)._join_to_left(
-                l_info, left, right, onclause, outerjoin)
+    def _join_to_left(self, *args, **kwargs):
+
+        right = args[1 if SQLA_VERSION_8 else 2]
+        super(TenantQuery, self)._join_to_left(*args, **kwargs)
 
         _process_from(inspection.inspect(right).selectable, self)
 
