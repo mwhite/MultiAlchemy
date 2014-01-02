@@ -98,6 +98,7 @@ def test_multitenant_query_enforces_tenant(models, session):
 
 def test_join_enforces_tenant(models, session):
     sql = str(session.query(models.User).join(models.Post))
+    print(sql)
     assert 'posts.tenant_id = ' in sql
     assert 'JOIN' in sql
 

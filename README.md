@@ -110,7 +110,25 @@ tenant, even for joins.
 SELECT posts.id AS posts_id, posts.title AS posts_title, posts.author_id AS posts_author_id, posts.tenant_id AS posts_tenant_id 
 FROM posts 
 WHERE posts.tenant_id = :tenant_id_1
->>> print(str(session.query(models.User).join(models.User.posts)))
+>>> print(str(session.query(User).join(Post)))
+SELECT users.id AS users_id, users.name AS users_name 
+FROM users JOIN posts ON users.id = posts.author_id 
+WHERE posts.tenant_id = :tenant_id_1
 ```
 
 You can bypass the tenant checking by passing `safe=False` to `session.query()`.
+
+Instances also automatically get assigned the correct `tenant_id` when you add
+them to the session:
+
+```python
+>>> post = Post(title='Baz', author_id=1)
+>>> session.add(post)
+>>> post.tenant_id
+1
+```
+
+License
+--
+
+MIT

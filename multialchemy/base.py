@@ -34,8 +34,8 @@ class Base(object):
         if not cls.__multitenant__:
             return None
 
-        return Column(Integer,
-                ForeignKey("%s.id" % cls._tenant_cls.__tablename__))
+        return Column(
+                Integer, ForeignKey("%s.id" % cls._tenant_cls.__tablename__))
 
 
     # abandoning this for now as it causes unexpected SQLAlchemy error
@@ -110,6 +110,11 @@ class TenantQuery(query.Query):
 
     @property
     def _from_obj(self):
+        # we only do the multitenant processing on accessing the _from_obj /
+        # froms properties, rather than have a wrapper object, because it
+        # wasn't possible to implement the right magic methods and still have
+        # the wrapper object evaluate to the underlying sequence.
+        # This approach is fine because adding a given criterion is idempotent.
         if getattr(self, '_from_obj_', None) is None:
             self._from_obj_ = ()
         for from_ in self._from_obj_:
@@ -152,7 +157,7 @@ def _process_from(from_, query, query_context=None):
     if tenant_id_col is not None:
         if query.session.tenant is None:
             raise UnboundTenantError(
-                "Tried to do a tenant-bound query in a tenantless session.")
+                "Tried to do a tenant-bound query in a tenantless context.")
 
         # logic copied from orm.Query.filter, in order to be able to modify
         # the existing query in place
