@@ -38,7 +38,8 @@ class Base(object):
             return None
 
         return Column(
-                Integer, ForeignKey("%s.id" % cls._tenant_cls.__tablename__))
+                Integer, ForeignKey("%s.id" % cls._tenant_cls.__tablename__),
+                index=True)
 
 
     # abandoning this for now as it causes unexpected SQLAlchemy error
