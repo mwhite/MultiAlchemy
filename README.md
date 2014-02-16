@@ -105,17 +105,6 @@ them to the session:
 1
 ```
 
-Roadmap
---
-
-- System for creating views for specific tenants for specific tables where some
-  data is stored in a Postgres JSON column with a known semi-structured schema.
-
-- Automatically creating per-tenant users and views for all multi-tenant tables,
-  for applications which might want to expose a direct query console to users,
-  or that need extra strictness.  This would need to hook into migrations for
-  when multi-tenant tables are added or modified.
-
 License
 --
 
