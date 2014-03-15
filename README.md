@@ -3,6 +3,7 @@ MultiAlchemy
 
 [![Build Status](https://travis-ci.org/mwhite/MultiAlchemy.png)](https://travis-ci.org/mwhite/MultiAlchemy)
 [![Coverage Status](https://coveralls.io/repos/mwhite/MultiAlchemy/badge.png)](https://coveralls.io/r/mwhite/MultiAlchemy)
+[![Dependency Status](https://gemnasium.com/mwhite/MultiAlchemy.png)](https://gemnasium.com/mwhite/MultiAlchemy)
 
 MultiAlchemy is an experimental [SQLAlchemy](http://www.sqlalchemy.org)
 extension that makes it easy to write row-based multi-tenant applications
